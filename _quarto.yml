@@ -41,6 +41,7 @@ book:
     - part: "Building AI Pipelines"
       chapters:
         - patterns/agentic-workflows.qmd
+        - patterns/index-card-classifier.qmd
 
     - part: "Evaluating AI Outputs"
       chapters:
