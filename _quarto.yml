@@ -18,6 +18,9 @@ book:
   title: "AI Design Patterns for Information Professionals"
   author: "Daniel van Strien"
   date: today
+  repo-url: https://github.com/davanstrien/ai-patterns-for-glam
+  repo-branch: main
+  repo-actions: [edit, issue]
   chapters:
     - index.qmd
     - intro.qmd

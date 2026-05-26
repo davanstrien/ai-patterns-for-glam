@@ -1,5 +1,7 @@
 # AI Design Patterns for GLAM
 
+📖 **Read the book:** <https://danielvanstrien.xyz/ai-patterns-for-glam/>
+
 A practical guide to implementing AI in Galleries, Libraries, Archives, and Museums.
 
 ## About
