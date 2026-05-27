@@ -45,6 +45,7 @@ book:
       chapters:
         - patterns/agentic-workflows.qmd
         - patterns/index-card-classifier.qmd
+        - patterns/extending-a-community-model.qmd
 
     - part: "Evaluating AI Outputs"
       chapters:
