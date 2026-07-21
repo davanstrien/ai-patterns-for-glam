@@ -1,0 +1,313 @@
+# Classical AI
+
+Before generative models took over, most machine learning tasks fell into one of two broad categories, and the model you choose depends on the type of task being solved:
+
+- **Classification** - models that sort inputs into categories (e.g. cat vs dog vs bird, or a yes/no decision)
+- **Regression** - models that turn inputs into a value on a scale (e.g. a score, or a person's height)
+
+Ultimately, generative LLMs are just performing classification in a loop. At each step they pick the next token from a fixed vocabulary, which is a classification problem with tens of thousands of categories!
+
+These "classical" methods have not gone away, and for many GLAM tasks they are still the right tool for a number of reasons:
+
+- **fast** - predictions in milliseconds on an ordinary laptop, no GPU required
+- **cheap** - no per-call API costs, no expensive hardware requirements
+- **interpretable** - you can inspect exactly which words drove a decision
+- **easy to train** - models train quickly and reliably on even small amounts of data.
+
+When the task is narrow and you have some labelled examples, a small classical model often beats reaching for a large language model. In this chapter we will use [scikit-learn](https://scikit-learn.org) to build a classification model for predicting the *artistic style* of a painting from its web-text description.
+
+## The Task
+
+The [National Gallery Style Classification dataset](https://huggingface.co/datasets/wrmthorne/National_Gallery_style_classification) pairs the National Gallery's web-text descriptions of paintings with the artistic styles those paintings belong to — *Baroque*, *Gothic*, *Impressionist*, and so on. Our goal is to train a model that reads a description and predicts the style.
+
+Collections are full of free-text descriptions that have never been consistently tagged with controlled vocabulary. A classifier that suggests a style term for each record can quickly annotate large numbers of samples, making them more discoverable to researchers and the public.
+
+::: {.callout-note}
+This is a *text classification* task: the input is text, the output is a category. The same recipe works for subject classification, genre detection, language identification, routing enquiries, etc.
+:::
+
+## The Dataset
+
+We load the dataset straight from the Hugging Face Hub with the `datasets` library. It comes already split into `train`, `valid`, and `test` portions — we train on `train` and report final numbers on `test`.
+
+```{python}
+from datasets import load_dataset
+from sklearn import set_config
+
+# scikit-learn renders a fitted model as a large interactive HTML diagram by
+# default. That single huge HTML blob trips up document conversion, so switch
+# to a compact text representation instead.
+set_config(display="text")
+
+ds = load_dataset("wrmthorne/National_Gallery_style_classification")
+ds
+```
+
+Each row is one painting. The fields we care about are the two text descriptions `short_text` (a brief summary) and `long_text` (the full web-text description), and the list of style labels, `labels_text`. Let's look at one:
+
+```{python}
+row = ds["train"][0]
+print(f"STYLE: {row['labels_text']}")
+print()
+print(row["short_text"])
+```
+
+Notice the labels come as a *list*. Each painting can belong to more than one style, for instance, a transitional work might be tagged both *Gothic* and *Early Renaissance*. We will start simple and come back to multi-label classification a bit later.
+
+We first want to know what styles are present, and how common is each? The full label set has 23 styles:
+
+```{python}
+from collections import Counter
+import matplotlib.pyplot as plt
+
+class_names = sorted({name for row in ds["train"]["labels_text"] for name in row})
+
+freq = Counter(name for row in ds["train"]["labels_text"] for name in row)
+freq = dict(sorted(freq.items(), key=lambda kv: kv[1]))
+
+plt.figure(figsize=(7, 6))
+plt.barh(list(freq), list(freq.values()))
+plt.xlabel("paintings in training set")
+plt.title("How often each style appears")
+plt.tight_layout()
+plt.show()
+```
+
+This is a **heavily imbalanced** dataset: *Baroque* and *High Renaissance* dominate, while styles like *Mannerist*, *Symbolist*, or *Victorian* appear only a handful of times. This matters a lot for how we measure success, as we will see.
+
+## From Words to Numbers
+
+Models cannot read text directly — it first has to be converted into numbers. This is vectorization. One of the simplest and most effective vectorization methods is **TF-IDF** (*term frequency–inverse document frequency*). The idea is simple:
+
+- Count how often each word appears in a document (**term frequency**).
+- Count the number of documents a word appears in and take its inverse (1/DF = IDF) (**inverse document frequency**)
+
+Words that appear in lots of documents are not very informative (e.g. "the", "and", "or") and get down-weighted but words that are both frequent in *this* document and rare across the collection get the highest weight. Here is an example:
+
+```{python}
+from sklearn.feature_extraction.text import TfidfVectorizer
+
+examples = [
+    "A serene Impressionist beach scene at dawn.",
+    "A Gothic altarpiece of the Virgin and Child.",
+]
+demo = TfidfVectorizer().fit(examples)
+print("Vocabulary:", list(demo.get_feature_names_out()))
+demo.transform(examples).toarray().round(2)
+```
+
+Rows are documents, columns are vocabulary words, values are weights. Shared words like "a" wash out while distinctive ones score highly and influence classification more.
+
+## Single Style per Painting
+
+We start with the paintings that have **exactly one** style, giving us a clean multi-class classification problem to start.
+
+```{python}
+def single_style(split):
+    """Keep only paintings tagged with exactly one style."""
+    return [r for r in ds[split] if len(r["labels_text"]) == 1]
+
+train_rows = single_style("train")
+test_rows  = single_style("test")
+len(train_rows), len(test_rows)
+```
+
+We chain TF-IDF and a `LogisticRegression` (confusingly a classifier) into a single `Pipeline`, so the same steps apply at train and predict time.
+
+```{python}
+from sklearn.pipeline import Pipeline
+from sklearn.linear_model import LogisticRegression
+
+def xy(rows, field):
+    X = [r[field] for r in rows]
+    y = [r["labels_text"][0] for r in rows]
+    return X, y
+
+X_train, y_train = xy(train_rows, "long_text")
+X_test,  y_test  = xy(test_rows,  "long_text")
+
+model = Pipeline([
+    ("tfidf", TfidfVectorizer(stop_words="english", min_df=2, ngram_range=(1, 2))),
+    ("clf",   LogisticRegression(max_iter=1000, class_weight="balanced", random_state=42)),
+])
+model.fit(X_train, y_train)
+```
+
+The vectoriser drops English stop words, ignores words appearing in only one document (`min_df=2`), and keeps bigrams alongside unigrams (`ngram_range=(1, 2)`) so phrases like "still life" survive. `class_weight="balanced"` weights the rare styles up, rather than letting the model default to *Baroque* every time.
+
+::: {.callout-note}
+## Repeatability
+Machine-learning code is full of randomness so the same code can give different numbers on different runs. Passing a fixed `random_state` seeds that randomness, so results are repeatable run-to-run and for anyone else who runs the notebook. Without this, it's hard to be sure whether an increase in score came from a change you made or just luck.
+:::
+
+A prediction on a painting it has never seen:
+
+```{python}
+sample = test_rows[0]
+print("TRUE: ", sample["labels_text"][0])
+print("PRED: ", model.predict([sample["long_text"]])[0])
+print()
+print(sample["short_text"][:400], "...")
+```
+
+## Did It Work?
+
+One prediction proves nothing. We score the model across the whole test set, against a baseline of always guessing the most common style:
+
+```{python}
+from sklearn.metrics import accuracy_score, f1_score
+
+pred = model.predict(X_test)
+majority = Counter(y_train).most_common(1)[0][0]
+baseline = sum(1 for y in y_test if y == majority) / len(y_test)
+
+print(f"Most-frequent-class baseline : {baseline:.3f}  (always guess '{majority}')")
+print(f"Model accuracy               : {accuracy_score(y_test, pred):.3f}")
+print(f"Model macro F1               : {f1_score(y_test, pred, average='macro', zero_division=0):.3f}")
+```
+
+While we more than doubled the baseline score, the more important takeaway is the gap between **accuracy** and **macro F1**. The difference comes from accuracy rewarding correct classification of common styles where macro F1 averages *per style*, making it equally important to correctly classify common and rare styles. A high accuracy with a low macro F1 means the model leans on the majority classes and neglects the rare ones. This is why an accuracy figure means little without a baseline to beat.
+
+Let's inspect the per-class breakdowns:
+
+```{python}
+from sklearn.metrics import classification_report
+
+print(classification_report(y_test, pred, zero_division=0))
+```
+
+The rare styles, with few or zero training examples, score poorly or not at all. This is a sign to annotate more samples for these labels when using this on your own dataset.
+
+## Short Text or Long Text?
+
+Does the longer text actually help? The pipeline is a few lines, so just train both and compare:
+
+```{python}
+import pandas as pd
+
+def evaluate(field):
+    X_tr, y_tr = xy(train_rows, field)
+    X_te, y_te = xy(test_rows, field)
+    m = Pipeline([
+        ("tfidf", TfidfVectorizer(stop_words="english", min_df=2, ngram_range=(1, 2))),
+        ("clf",   LogisticRegression(max_iter=1000, class_weight="balanced", random_state=42)),
+    ]).fit(X_tr, y_tr)
+    p = m.predict(X_te)
+    return accuracy_score(y_te, p), f1_score(y_te, p, average="macro", zero_division=0)
+
+pd.DataFrame(
+    {f: evaluate(f) for f in ["short_text", "long_text"]},
+    index=["accuracy", "macro F1"],
+).T.round(3)
+```
+
+Long text wins on both: more words means more information to work with.
+
+## Looking Inside the Model
+
+A linear model assigns a weight to every word, so we can read off which words are most influential for each style:
+
+::: {.callout-note}
+Some interpretability methods exist for LLMs, but they are typically much more complex, expensive and less informative.
+:::
+
+```{python}
+import numpy as np
+
+vectoriser = model.named_steps["tfidf"]
+classifier = model.named_steps["clf"]
+features = vectoriser.get_feature_names_out()
+
+for style in ["Impressionist", "Gothic", "Baroque"]:
+    i = list(classifier.classes_).index(style)
+    top = features[np.argsort(classifier.coef_[i])[-8:][::-1]]
+    print(f"{style:14s}: {', '.join(top)}")
+```
+
+Some of these make perfect sense: *Gothic* is driven by "virgin", "christ", "saint", "panel". But notice how many are **artist names**: *Impressionist* leans on "monet", "renoir", "pissarro"; *Baroque* on "rembrandt", "rubens". The model has partly learned a shortcut by using *which artist* as a proxy for *which style*.
+
+That is a real limitation, and the headline accuracy does nothing to inform us of this. Our test set draws from the same pool of artists as the training set, so every time the model leans on "monet" or "rembrandt" it is exploiting a name it has *already seen labelled*. The test score therefore measures performance on familiar artists, not on *style itself*. This is only caught by looking inside the model.
+
+To show why this is an issue, we will give the model the Art Institute of Chicago's description of the impressionist painter [Mary Cassatt's "The Child's Bath"](https://www.artic.edu/artworks/111442/the-child-s-bath). Cassatt is not represented in the National Gallery's permanent collection so she didn't appear in the training data. Let's give this to the model to classify:
+
+```{python}
+childs_bath = """\
+The Child's Bath is a tender portrayal of familial closeness, a subject that
+Mary Cassatt explored throughout her career. The caregiver's cheek brushing
+the child's shoulder, her encircling embrace, and the child's pudgy hand on
+her knee suggest an emotional bond between the two.
+
+Captivated by a large exhibition of Japanese prints in Paris in 1890, Cassatt
+set out to produce a series of color prints influenced by Japanese aesthetics.
+She then continued her investigation across media, culminating in this bold
+composition, with its dramatically flattened picture plane, decorative
+patterning, and bright palette."""
+
+print(f"PRED                    : {model.predict([childs_bath])[0]}")
+print(f"'cassatt' seen in train : {'cassatt' in vectoriser.vocabulary_}")
+```
+
+The model predicts the wrong style. As seen in the second line, `cassatt` is not in the vocabulary, preventing the model from exploiting the artist-name shortcut. The model becomes very uncertain without its crutch:
+
+```{python}
+proba = model.predict_proba([childs_bath])[0]
+for i in np.argsort(proba)[::-1][:5]:
+    print(f"{classifier.classes_[i]:18s} {proba[i]:.3f}")
+```
+
+The model is practically random in this instance - no style clears even 12%, despite the text being full of genuine Impressionist signal ("Japanese prints", "flattened picture plane", "bright palette").
+
+## Handling Multiple Labels
+
+Back to the styles we set aside: a painting can hold any number of the 23. The `labels` field already encodes this as a multi-hot vector — one 0/1 per style, alphabetical, matching `class_names`. Wrapping `LogisticRegression` in a `OneVsRestClassifier` trains one yes/no classifier *per style* and combines them:
+
+```{python}
+from sklearn.multiclass import OneVsRestClassifier
+
+Y_train = np.array(ds["train"]["labels"])
+Y_test  = np.array(ds["test"]["labels"])
+
+multi = Pipeline([
+    ("tfidf", TfidfVectorizer(stop_words="english", min_df=2, ngram_range=(1, 2))),
+    ("clf",   OneVsRestClassifier(LogisticRegression(max_iter=1000, class_weight="balanced", random_state=42))),
+])
+multi.fit(ds["train"]["long_text"], Y_train)
+multi_pred = multi.predict(ds["test"]["long_text"])
+
+print(f"Micro F1 : {f1_score(Y_test, multi_pred, average='micro', zero_division=0):.3f}")
+print(f"Macro F1 : {f1_score(Y_test, multi_pred, average='macro', zero_division=0):.3f}")
+```
+
+Accuracy is no use here as demanding all 23 labels be exactly right is far too strict. F1 instead trades off how many predicted tags were correct against how many true ones we found. Micro F1 pools every decision (favouring common styles), while macro F1 averages per style (equally weighting the rare classes).
+
+We can now predict *several* styles for a painting that genuinely has several:
+
+```{python}
+i = next(i for i in range(len(Y_test)) if Y_test[i].sum() == 2)
+
+true = [class_names[j] for j, on in enumerate(Y_test[i]) if on]
+pred = [class_names[j] for j, on in enumerate(multi_pred[i]) if on]
+print("TRUE:", true)
+print("PRED:", pred)
+```
+
+## Considerations
+
+**When a classical model is the right choice**
+
+1. The task is **narrow and well-defined**
+2. You have, or can create, **labelled examples**
+3. You need predictions to be **fast, cheap, and run anywhere**
+4. You value **interpretability**
+
+**When to reach for something heavier**
+
+1. The categories are **not known in advance**, or change constantly.
+2. The signal depends on **deep semantic understanding** that bag-of-words TF-IDF cannot capture (subtle tone, long-range context, reasoning across the document).
+3. You have **very little labelled data** but a good description of the task — a zero-shot LLM may do better with no training at all. (The [distillation chapter](distillation.qmd) shows how an LLM can be used to generate data to train a small, fast classifier.)
+
+**Watch out for**
+
+1. **Class imbalance** — report macro F1 and a per-class breakdown, not just accuracy, and always compare to a baseline.
+2. **Shortcut learning** — as we saw, the model may latch onto artist names rather than style. Inspect the top features to catch it.
+3. **The ceiling on rare classes** — no algorithm rescues a category with three training examples. The answer is more labelled data.

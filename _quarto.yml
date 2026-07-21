@@ -38,6 +38,7 @@ book:
 
     - part: "Organising Collections"
       chapters:
+        - patterns/classical-ai.qmd
         - patterns/distillation.qmd
         - patterns/semantic-search.qmd
 

@@ -59,6 +59,15 @@ What these models share is that they do one thing well, they do it cheaply, and 
 
 It's also worth noting that the line between "task-specific model" and "general-purpose model" is blurring. *Small* language models and vision-language models — in the 1-8 billion parameter range — can now handle many of these tasks well, especially with the right prompting or light fine-tuning. For the [National Library of Scotland's](https://www.nls.uk/) index card extraction work, we ended up using a small vision-language model rather than building separate OCR and extraction pipelines. The key distinction isn't really about model architecture — it's about using the right-sized tool for the job, rather than defaulting to the largest model available.
 
+## A Blast from the Past
+
+For many, language models and vision-language models are their first exposure to AI but modern models are the product of foundational work that [started in the 1940s](https://www.ibm.com/think/topics/history-of-artificial-intelligence). The *really* boring truth is that the best model for the job may be older than the computer itself.
+
+On the right classification task, logistic-regression ([first developed in the 1830s and 1840s](https://en.wikipedia.org/wiki/Logistic_regression#History)) can outperform even the largest language models of today while being near instant to train and run, all while using small amounts of data. It is always a good idea to start with the smallest, cheapest approach and scale up only if necessary. Packages like [scikit-learn](https://scikit-learn.org/stable/) and [SciPy](https://scipy.org/) will cover nearly every classical AI approach you could feasibly need (and more).
+
+Logistic regression, among many other traditional AI approaches, is always good to set a strong baseline which you can reference to know whether more complex or expensive approaches are worth their keep.
+
+
 ## Sustainable AI for Libraries
 
 Beyond being more useful, boring AI is also more sustainable. The advantages compound over time.

@@ -6,6 +6,7 @@ jupyter
 jupyter-cache
 rich
 tqdm
+scikit-learn
 stamina
 aiohttp
 aiofiles

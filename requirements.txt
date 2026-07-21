@@ -21,8 +21,6 @@ anyio==4.12.1
     #   jupyter-server
     #   lmstudio
     #   openai
-appnope==0.1.4
-    # via ipykernel
 argon2-cffi==25.1.0
     # via jupyter-server
 argon2-cffi-bindings==25.1.0
@@ -100,6 +98,8 @@ fsspec==2025.10.0
     # via
     #   datasets
     #   huggingface-hub
+greenlet==3.5.3
+    # via sqlalchemy
 h11==0.16.0
     # via
     #   httpcore
@@ -157,6 +157,8 @@ jinja2==3.1.6
     #   nbconvert
 jiter==0.13.0
     # via openai
+joblib==1.5.3
+    # via scikit-learn
 json5==0.13.0
     # via jupyterlab-server
 jsonpointer==3.0.0
@@ -245,6 +247,8 @@ multidict==6.7.1
     #   yarl
 multiprocess==0.70.18
     # via datasets
+narwhals==2.24.0
+    # via scikit-learn
 nbclient==0.10.4
     # via
     #   jupyter-cache
@@ -273,6 +277,8 @@ numpy==2.4.2
     #   datasets
     #   matplotlib
     #   pandas
+    #   scikit-learn
+    #   scipy
 openai==2.21.0
     # via -r requirements.in
 packaging==26.0
@@ -382,6 +388,10 @@ rpds-py==0.30.0
     # via
     #   jsonschema
     #   referencing
+scikit-learn==1.9.0
+    # via -r requirements.in
+scipy==1.18.0
+    # via scikit-learn
 send2trash==2.1.0
     # via jupyter-server
 setuptools==82.0.0
@@ -412,6 +422,8 @@ terminado==0.18.1
     # via
     #   jupyter-server
     #   jupyter-server-terminals
+threadpoolctl==3.6.0
+    # via scikit-learn
 tinycss2==1.4.0
     # via bleach
 tornado==6.5.4
@@ -449,12 +461,15 @@ typer-slim==0.24.0
     # via huggingface-hub
 typing-extensions==4.15.0
     # via
+    #   aiosignal
+    #   anyio
     #   beautifulsoup4
     #   huggingface-hub
     #   lmstudio
     #   openai
     #   pydantic
     #   pydantic-core
+    #   referencing
     #   sqlalchemy
     #   typing-inspection
 typing-inspection==0.4.2
