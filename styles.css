@@ -1,0 +1,68 @@
+/* ---------------------------------------------------------------------------
+   Contributor byline
+   ---------------------------------------------------------------------------
+   Credits a chapter to a guest author. Place directly under the chapter H1:
+
+     ::: {.pattern-byline}
+     Pattern by **[Name](https://example.org)** · Institution
+     :::
+
+   The accent colour can be set per chapter by overriding --byline-accent:
+
+     ::: {.pattern-byline style="--byline-accent: #006548;"}
+
+   Defaults to University of Sheffield brand violet, taken from the hex values
+   used on sheffield.ac.uk (dark violet #24135f, electric violet #7100ff).
+--------------------------------------------------------------------------- */
+
+.pattern-byline {
+  --byline-accent: #24135f;
+  --byline-accent-hover: #7100ff;
+
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin: 0.4rem 0 2rem;
+  padding: 0.7rem 0.95rem;
+  border-left: 4px solid var(--byline-accent);
+  border-radius: 0 0.25rem 0.25rem 0;
+  background: #f0eef4; /* fallback for browsers without color-mix() */
+  background: color-mix(in srgb, var(--byline-accent) 7%, transparent);
+  font-size: 0.92rem;
+  line-height: 1.45;
+  /* darker than Bootstrap's muted grey, to hold 4.5:1 against the tint */
+  color: #5c636a;
+}
+
+/* Author glyph. Drawn as a mask rather than a background image so it picks up
+   --byline-accent instead of hardcoding the fill in the SVG. */
+.pattern-byline::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 1.05rem;
+  height: 1.05rem;
+  background-color: var(--byline-accent);
+  --byline-icon: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm2 1H6a4 4 0 0 0-4 4 1 1 0 0 0 1 1h10a1 1 0 0 0 1-1 4 4 0 0 0-4-4Z"/></svg>');
+  -webkit-mask: var(--byline-icon) center / contain no-repeat;
+  mask: var(--byline-icon) center / contain no-repeat;
+}
+
+.pattern-byline p {
+  margin: 0;
+}
+
+.pattern-byline strong {
+  font-weight: 600;
+  color: var(--bs-body-color, #373a3c);
+}
+
+.pattern-byline a {
+  color: inherit;
+  text-decoration: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--byline-accent) 45%, transparent);
+}
+
+.pattern-byline a:hover {
+  color: var(--byline-accent-hover);
+  border-bottom-color: currentColor;
+}

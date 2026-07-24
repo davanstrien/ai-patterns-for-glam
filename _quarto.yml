@@ -65,6 +65,7 @@ bibliography: references.bib
 format:
   html:
     theme: cosmo
+    css: styles.css
     toc: true
     search: true
   # pdf:
