@@ -1,5 +1,9 @@
 # Classical AI
 
+::: {.pattern-byline}
+Pattern written by **[William Thorne](https://github.com/wrmthorne)** · University of Sheffield · National Gallery
+:::
+
 Before generative models took over, most machine learning tasks fell into one of two broad categories, and the model you choose depends on the type of task being solved:
 
 - **Classification** - models that sort inputs into categories (e.g. cat vs dog vs bird, or a yes/no decision)
