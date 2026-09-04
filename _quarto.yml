@@ -68,6 +68,9 @@ format:
     css: styles.css
     toc: true
     search: true
+    include-in-header:
+      - text: |
+          <script defer src="https://cloud.umami.is/script.js" data-website-id="85cb27d6-dbf9-43d7-97d0-be4e6724de7a" data-tag="glam-book" data-domains="danielvanstrien.xyz"></script>
   # pdf:
   #   documentclass: scrreprt
 
