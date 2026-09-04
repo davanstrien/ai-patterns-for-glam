@@ -17,7 +17,7 @@ We'll use the [Sloane Index Cards Dataset](https://huggingface.co/datasets/bigla
 > The files in this dataset are derived from microfilm copies of the original library catalogue of Sir Hans Sloane, now presented across 9 volumes, Sloane MS 3972 C 1-8, and the name index to the Sloane library catalogue, Sloane MS 3972 D. The catalogues are crucial for understanding the development of Sloane's collections, the present-day collections of the British Library, British Museum and Natural History Museum, and to identifying collection items which are now dispersed across a number of institutions.
 
 
-The dataset is available in Parquet format on [Hugging Face](https://huggingface.co/datasets/biglam/biglam/sloane-catalogues) so it can be easily loaded using the `datasets` library.
+The dataset is available in Parquet format on [Hugging Face](https://huggingface.co/datasets/biglam/sloane-catalogues) so it can be easily loaded using the `datasets` library.
 
 Let's load the dataset and take a look at one row.
 
